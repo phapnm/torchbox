@@ -3,6 +3,7 @@ torchvision
 torchsummary
 scikit-learn
 opencv-python
+matplotlib
 barbar
 numpy
 pandas
