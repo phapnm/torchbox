@@ -10,12 +10,12 @@ from datetime import datetime
 
 import torch
 from torch.optim.lr_scheduler import (ReduceLROnPlateau, CosineAnnealingLR)
-from model import classification as model
+from models import classification as model
 
 from utils import logger
 from utils import metrics as metrics
 from utils import callbacks
-from utils.general import (get_optimizer, get_loss_fn, make_dir_epoch_time)
+from utils.general import (model_loader,  get_optimizer, get_loss_fn, make_dir_epoch_time)
 from data_loader.dataloader import data_split, get_data_loader
 
 import trainer
@@ -68,12 +68,12 @@ def main(
     
     ## Learning rate decay
     max_lr = 3e-3  # Maximum LR
-    min_lr = 1e-5  # Minimum LR
+    min_lr = cfg["optimizer"]["min_lr"]  # Minimum LR
     t_max = 10     # How many epochs to go from max_lr to min_lr
     save_method = cfg["optimizer"]["lr_scheduler_factor"]
-    patiences = cfg["optimizer"]["lr_patience"]
+    lr_patiences = cfg["optimizer"]["lr_patience"]
     lr_factor = cfg["optimizer"]["reduce_lr_factor"]
-    scheduler = ReduceLROnPlateau(optimizer, mode = save_method, min_lr = min_lr, patience = patiences, factor = lr_factor)
+    scheduler = ReduceLROnPlateau(optimizer, mode = save_method, min_lr = min_lr, patience = lr_patiences, factor = lr_factor)
     # scheduler = CosineAnnealingLR(optimizer, T_max=t_max, eta_min=min_lr)
 
     print("\nTraing shape: {} samples".format(len(train_loader.dataset)))
@@ -91,17 +91,16 @@ def main(
     checkpoint_path = os.path.join(log_dir,"Checkpoint.pt")
     save_mode = cfg["train"]["mode"]
     early_patience = cfg["train"]["early_patience"]
-    early_stopping = callbacks.EarlyStopping(patience=10, mode = save_mode ,path = checkpoint_path)
+    early_stopping = callbacks.EarlyStopping(patience=early_patience, mode = save_mode, path = checkpoint_path)
 
     # training models
     num_epoch = int(cfg["train"]["num_epoch"])
     best_val_acc = 0
     t0 = time.time()
 
-    for epoch in range(0, num_epoch):
+    for epoch in range(num_epoch):
         t1 = time.time()
-        print(('\n' + '%13s' * 3) % ('Epoch', 'gpu_mem', 'mean_loss'))
-        train_loss, val_loss, train_acc, val_acc, train_result, val_result = trainer.train_one_epoch(
+        train_loss, train_acc, val_loss, val_acc, train_result, val_result = trainer.train_one_epoch(
             epoch, num_epoch,
             model, device,
             train_loader, valid_loader,
@@ -155,7 +154,7 @@ def main(
 
     print("Classification Report: \n{}".format(report))
     print('Completed in %.3f seconds.' % (time.time() - t0))
-    print(f'Start Tensorboard with "tensorboard --logdir {log_dir}", view at http://localhost:6006/')
+    print('Start Tensorboard with tensorboard --logdir {}, view at http://localhost:6006/'.format(log_dir))
     # # saving torch models
 
 
@@ -173,10 +172,6 @@ if __name__ == "__main__":
     # comment for this experiment: leave here
     comment = cfg["session"]["sess_name"]
 
-    cls =  models.resnet50(pretrained=True)
-    cls.fc = torch.nn.Linear(cls.fc.in_features,2)
-    print("Successfully imported model module")
-
     # create dir to save log and checkpoint
     save_path = cfg['train']['save_path']
     time_str = str(datetime.now().strftime("%Y%m%d-%H%M"))
@@ -187,14 +182,17 @@ if __name__ == "__main__":
     log_file = logger.make_file(log_dir, 'result.txt')
     logger.log_initilize(log_file)
     tb_writer = logger.make_writer(log_dir = log_dir)
-    logging.info(f'Start Tensorboard with "tensorboard --logdir {log_dir}", view at http://localhost:6006/')
-    print(f"--------All checkpoint will be saved to {log_dir} --------")
+    logging.info(f"Start Tensorboard with tensorboard --logdir {log_dir}, view at http://localhost:6006/")
+    print("--------All checkpoint will be saved to ```{}```--------".format(log_dir))
+
+    cls_model = model_loader(cfg)
+    print("Successfully imported model module")
     print("Done Loading!!!\n")
-    time.sleep(3)
+    time.sleep(2.7)
     
     main(
         config = cfg,
-        model=cls,
+        model=cls_model,
         comment=comment,
         checkpoint=checkpoint,
     )

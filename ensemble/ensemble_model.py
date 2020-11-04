@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+
+
 class MyEnsemble(nn.Module):
     def __init__(self, modelA, modelB,modelC, nb_classes=10):
         super(MyEnsemble, self).__init__()

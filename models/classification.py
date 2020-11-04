@@ -5,7 +5,7 @@ import pretrainedmodels as ptm
 import ssl
 import time
 # from efficientnet_pytorch import EfficientNet
-from model.spp import SPPLayer
+from models.spp import SPPLayer
 from ensemble.ensemble_model import MyEnsemble
 import copy
 

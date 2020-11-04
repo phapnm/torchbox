@@ -1,5 +1,4 @@
 import time
-import model
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -14,14 +13,18 @@ def train_one_epoch(
         criterion, optimizer,
         train_metrics, valid_metrics,
     ):
-    
+    # train only classsify layer few first epoch and then train all DNN
+    if (epoch + 1)  == 5:
+        print("Release Parameter")
+        for param in model.parameters():
+            param.requires_grad = True
+    print(('\n' + '%13s' * 3) % ('Epoch', 'gpu_mem', 'mean_loss'))
     # training-the-model
     with tqdm(enumerate(train_loader), total = len(train_loader)) as pbar:
         train_loss = 0
         valid_loss = 0
         mloss = 0
         correct = 0
-        # print("LR : {} \n".format(optimizer.param_groups[0]['lr']))
         model.train()
         for batch_i, (inputs, targets) in pbar:
             # move-tensors-to-GPU
@@ -46,7 +49,7 @@ def train_one_epoch(
             correct += torch.sum(preds.data == targets.data).item()
 
             ## pbar
-            mem = '%.3g GB' % (torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0)  # (GB)
+            mem = '%.3gG' % (torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0)  # (GB)
             mloss = (mloss * batch_i + loss.item())/(batch_i + 1)
             s = ('%13s' * 2 + '%13.4g' * 1) % ('%g/%g' % (epoch+1, num_epoch), mem, mloss)
             pbar.set_description(s)

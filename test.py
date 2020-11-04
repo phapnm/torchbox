@@ -8,7 +8,7 @@ from data_loader import dataloader
 import pandas as pd
 import json
 from data_loader import transform
-from model import classification as cls
+from models import classification as cls
 import numpy as np
 from torchvision import transforms
 import PIL

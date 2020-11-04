@@ -9,11 +9,12 @@ from data_loader import dataloader
 
     
 def model_loader(config):
-    func_str = config.get('model.class')
-    mod_name, func_name = func_str.rsplit('.', 1)
+    model_dict = config.get('model')
+    mod_name, func_name = model_dict['model.class'].rsplit('.', 1)
     mod = importlib.import_module(mod_name)
     func = getattr(mod, func_name)
-    return func(**config.get('model_config'))
+    # removed_value = model_dict.pop('model.class', 'No Key found')
+    return func(**model_dict)
 
 def get_attr_by_name(func_str):
     """

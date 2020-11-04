@@ -14,7 +14,7 @@ import importlib
 import json
 import time
 import utils
-from model import classification as model
+from models import classification as model
 import data_loader
 import neptune
 

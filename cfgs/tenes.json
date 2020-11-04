@@ -15,23 +15,26 @@
     "label_dict": ["cat","dog"],
     "batch_size": 4
   },
-  "model.class": {
-    "name": "resnet101",
+  "model": {
+    "model.class": "models.resnet_transfer.resnet.ResNet_transfer",
+    "model_name": "resnet50",
+    "pretrained": true,
     "num_class": 2
   },
   "optimizer": {
     "name": "Adam",
     "lr": 1e-4,
     "lr_scheduler_factor": "min",
-    "lr_patience" : 10,
-    "reduce_lr_factor" : 0.5
+    "lr_patience": 3,
+    "reduce_lr_factor": 0.1,
+    "min_lr": 1e-5
   },
   "train": {
-    "num_epoch": 30,
+    "num_epoch": 20,
     "loss": "CrossEntropyLoss",
-    "early_patience": 10,
+    "early_patience": 7,
     "mode":"min",
-    "save_path": "../checkpoints",
+    "save_path": "./checkpoints",
     "metrics": ["accuracy_score"]
   }
 }
