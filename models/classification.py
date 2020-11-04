@@ -4,81 +4,69 @@ import torchvision.models as models
 import pretrainedmodels as ptm
 import ssl
 import time
-# from efficientnet_pytorch import EfficientNet
-from model.spp import SPPLayer
 from ensemble.ensemble_model import MyEnsemble
 import copy
+import math
+import torch
+import torch.nn as nn
 
-class ClassificationModel:
-    def __init__(self, model_name, pretrained=None, class_num=5):
-        """Make your model by using transfer learning technique:  
-        Using a pretrained model (not including the top layer(s)) as a feature extractor and 
-        add on top of that model your custom classifier
+class SPPLayer(nn.Module):
+    def __init__(self, scale_list):
+        super(SPPLayer, self).__init__()
+        self.scale_list = scale_list
 
-        Args:
-            model_name ([str]): [name of pretrained model]
-            pretrained (str, optional): [using pretrained weight or not]. Defaults to "imagenet".
-            class_num (int, optional): [number of target classes]. Defaults to 2.
-        """
-        self.model_name = model_name
-        self.pretrained = pretrained
-        self.class_num = class_num
-
-    def classifier(self, in_features):
-        # initilize your classifier here
-        classifier = nn.Sequential(
-            nn.Linear(in_features, 512, bias=True),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.3),
-            nn.Linear(512, 256, bias=True),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.3),
-            nn.Linear(256, self.class_num, bias=True)
-        )
-        # classifier = nn.Sequential(
-        #     nn.Linear(26880, 512, bias=True),
-        #     nn.ReLU(inplace=True),
-        #     nn.Dropout(0.3),
-        #     nn.Linear(512, 256, bias=True),
-        #     nn.ReLU(inplace=True),
-        #     nn.Dropout(0.3),
-        #     nn.Linear(256, self.class_num, bias=True)
-        # )
-        # classifier = nn.Sequential(
-        #     nn.Linear(in_features, 512, bias=True),
-        #     nn.ReLU(inplace=True),
-        #     nn.Linear(512, self.class_num, bias=True)
-        # )
-
-        # output should be a sequential instance
-        self.cls = classifier
-
-    def create_model(self):
-        # load your pretrained model
-        try:
-            # model = ptm.__dict__[self.model_name](pretrained=self.pretrained)
-            model = EfficientNet.from_name('efficientnet-b2')
-            
-        except:
-            ssl._create_default_https_context = ssl._create_unverified_context
-            model = ptm.__dict__[self.model_name](pretrained=self.pretrained)
+    def forward(self, x):
+        '''
+        x: a tensor vector of previous convolution layer
+        scale_list: list contain multi-scale pooling size
         
-        # incoming features to the classifier
-        # in_features = model.last_linear.in_features
-        in_features = model._fc.in_features
-        # create classfier
-        self.classifier(in_features)
-        # replace the last linear layer with your custom classifier
-        # model._avg_pooling = SPPLayer([1,2,4])
-        model._fc = self.cls
-        # model.last_linear = self.cls
-        # select with layers to unfreeze
-        for param in model.parameters():
-            param.requires_grad = True
-        # for param in model.parameters():
-        #     print(param.requires_grad)
-        # print(model)
-        return model
+        returns: a tensor vector with shape [1 x n] is the concentration of multi-level pooling
+        '''    
+        batch_size, in_channel, in_h, in_w = x.size()
+        scale_list = self.scale_list
+        for i in range(len(scale_list)):
+            h_wid = int(math.ceil(in_h / scale_list[i]))
+            w_wid = int(math.ceil(in_w / scale_list[i]))
+            h_pad = int((h_wid*scale_list[i] - in_h + 1)/2)
+            w_pad = int((w_wid*scale_list[i] - in_w + 1)/2)
+            # print(h_wid,w_wid,h_pad, w_pad,i)
+            maxpool = nn.MaxPool2d((h_wid, w_wid), stride=(h_wid, w_wid), padding=(h_pad, w_pad))
+            out = maxpool(x)
+            if(i == 0):
+                spp = out.view(batch_size, -1)
+            else:
+                spp = torch.cat((spp, out.view(batch_size, -1)), 1)
+        return spp
+        
+class SPP3DLayer(nn.Module):
+    def __init__(self, scale_list):
+        super(SPP3DLayer, self).__init__()
+        self.scale_list = scale_list
+
+    def forward(self, x):
+        '''
+        x: a tensor vector of previous convolution layer
+        scale_list: list contain multi-scale pooling size
+        
+        returns: a tensor vector with shape [1 x n] is the concentration of multi-level pooling
+        '''    
+        batch_size, in_channel, in_h, in_w, in_t = x.size()
+        scale_list = self.scale_list
+        for i in range(len(scale_list)):
+            h_wid = int(math.ceil(in_h / scale_list[i]))
+            w_wid = int(math.ceil(in_w / scale_list[i]))
+            t_wid = int(math.ceil(in_t / scale_list[i]))
+            h_pad = (h_wid*scale_list[i] - in_h + 1)/2
+            w_pad = (w_wid*scale_list[i] - in_w + 1)/2
+            t_pad = (t_wid*scale_list[i] - in_t + 1)/2
+            maxpool = nn.MaxPool3d((h_wid, w_wid, t_wid), stride=(h_wid, w_wid, t_wid), padding=(h_pad, w_pad, t_pad))
+            out = maxpool(x)
+            if(i == 0):
+                spp = out.view(batch_size, -1)
+            else:
+                spp = torch.cat((spp, out.view(batch_size, -1)), 1)
+        return spp
+
 
 class Lecnet(nn.Module):
     # here present the code coding for the Lecnet model in the paper

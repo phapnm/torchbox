@@ -29,7 +29,8 @@ class SPPLayer(nn.Module):
             else:
                 spp = torch.cat((spp, out.view(batch_size, -1)), 1)
         return spp
-        
+
+
 class SPP3DLayer(nn.Module):
     def __init__(self, scale_list):
         super(SPP3DLayer, self).__init__()

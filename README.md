@@ -69,7 +69,7 @@ Location : cfg/tenes.json
 
 The config file is the core file in this package. It contains core parameters to train. While most of them are interpretable, I provide here docs for some important params.
 
-### sess_name
+### **sess_name**
 ```json
 {
   "session": {
@@ -79,7 +79,7 @@ The config file is the core file in this package. It contains core parameters to
 ```
 This will create a directory that have name is "sess_name" + time
 
-### data params
+### **data params**
 ```json
 {
   "data":{
@@ -101,7 +101,7 @@ The training set will be further splitted to a smaller validation set by the **v
 
 label_dict: a list of all label names for mapping
 
-### Optimizer
+### **Optimizer**
 ```json
 {
   "optimizer": {
@@ -113,13 +113,31 @@ label_dict: a list of all label names for mapping
   }
 }
 ```
-**name** : name of the optimizer class in torch.optim. *Ex*: if you intend to use torch.optim.Adam simply type "Adam". 
+*name* : name of the optimizer class in torch.optim. *Ex*: if you intend to use torch.optim.Adam simply type "Adam". 
 
-**lr_scheduler_factor**, **lr_patience**, **reduce_lr_factor**: Args for decay learning rate 
+*lr_scheduler_factor*, *lr_patience*, *reduce_lr_factor*: Args for decay learning rate 
+
+## **Model**
+```json
+{
+  "model":{
+    "model.class": "models.resnet_transfer.resnet.ResNet_transfer",
+    "model_name": "resnet50",
+    "num_class": 2
+  }
+}
+```
+*model.class:* module ResNet_transfer is defined in models/resnet_transfer/resnet.py
+
+*model_name:* name of feature extractor
+
+*num_class:* number of class
+
+**Note:** If you want to customizing your own model, you should located them in the **models** folder and define *model.class*
 
 
-### Model
-```json\
+### **Other setting to train**
+```json
 {
   "train":{
     "num_epoch": 30,
@@ -131,20 +149,20 @@ label_dict: a list of all label names for mapping
   }
 }
 ```
-**num_epoch:** number of epoch.
+*num_epoch:* number of epoch.
 
-**loss:** if you intend to use torch.nn.CrossEntropyLoss simply type CrossEntropyLoss.
+*loss:* if you intend to use torch.nn.CrossEntropyLoss simply type CrossEntropyLoss.
 
-**early_patience**, **mode:** Args for Early Stopping
+*early_patience*, *mode:* Args for Early Stopping
 
-**save_path:** path to save checkpoints, logs
+*save_path:* path to save checkpoints, logs
 
 
-## Customizing your metrics: use your own metrics
+## **Customizing your metrics: use your own metrics**
 
 The **utils/metrics.py** file is a wrap file that handles the metrics implementation.
 
-Let's say use want to use your custom and newly created metrics. All you need to do is implement a Class which has a method to take in (labels [numpy or list type],preds) and calculate your measurement.
+Let's say you want to use your custom and newly created metrics. All you need to do is implement a Class which has a method to take in (labels [numpy or list type],preds) and calculate your measurement.
 
 Example: MyMetrics.IoU(labels,preds) 
 
@@ -162,24 +180,20 @@ Then in the utils/metrics.py file:
 
 3. Editing metrics name in your config file, example: `"metrics" : ["IoU"]`
 
-## Customizing your model
 
-In the **model/classification.py** file:
-
-Feel free to edit the `class ClassificationModel` but make sure your desired model's architecture is returned by the **create_model** method
-
-## Customizing tranformation(augmentation) and dataloaders
+## **Customizing tranformation(augmentation) and dataloaders**
 
 See data_loader/dataloader.py for customizing dataloaders
 
 See data_loader/transform.py for customizing the transformation
 
-## Customizing training actions:
+## **Customizing training actions:**
 
 See trainer.py, the file containing scripts for training one entire epoch
-
-
-
-
-
+```
+  if epoch == 5:
+    for param in model.parameters():
+        param.requires_grad = True
+```
+In first few epoch, model is freezed the **feature_extractor** to train **classify layer** and then they will be unfreezed train entire model.
 
